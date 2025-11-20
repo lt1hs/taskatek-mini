@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
-  Languages
+  Languages,
+  X
 } from 'lucide-react';
 import { ViewType, NavItem, Project, Language, UserProfile } from '../types';
 import { translations } from '../translations';
@@ -151,6 +152,10 @@ interface SidebarProps {
   onToggleLang: () => void;
   // User Profile
   userProfile: UserProfile;
+  // Mobile
+  isMobile?: boolean;
+  isOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -172,7 +177,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteProject,
   lang,
   onToggleLang,
-  userProfile
+  userProfile,
+  isMobile = false,
+  isOpen = true,
+  onCloseMobile
 }) => {
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -194,319 +202,340 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
+  const handleViewChange = (id: ViewType) => {
+    onChangeView(id);
+    if (isMobile && onCloseMobile) {
+      onCloseMobile();
+    }
+  };
+
+  // Determine dynamic styles based on mobile state
+  // Use h-[100dvh] for mobile to handle dynamic viewport height (address bar etc)
+  const sidebarClasses = isMobile
+    ? `fixed inset-0 w-full z-50 bg-[#FAFAFA] dark:bg-[#121212] transition-transform duration-300 flex flex-col h-[100dvh] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
+    : `h-full bg-[#FAFAFA] dark:bg-[#121212] flex flex-col border-e border-gray-200 dark:border-dark-border fixed start-0 top-0 z-30 transition-all duration-300 ease-in-out ${isCompact ? 'w-[80px] items-center' : 'w-[280px]'}`;
+
+  // On mobile, we don't use the 'isCompact' logic for internal layout, we assume expanded view but full width
+  const showExpanded = isMobile || !isCompact;
+
   return (
-    <aside 
-      className={`
-        h-full bg-[#FAFAFA] dark:bg-[#121212] flex flex-col border-e border-gray-200 dark:border-dark-border fixed start-0 top-0 z-30 transition-all duration-300 ease-in-out
-        ${isCompact ? 'w-[80px] items-center' : 'w-[280px]'}
-      `}
-    >
-      {/* User Profile / Toggle Header */}
-      <div className={`
-        flex items-center pt-6 mb-2 transition-all duration-300
-        ${isCompact ? 'flex-col gap-4 px-0 pb-4' : 'justify-between px-5 pb-0'}
-      `}>
-        <div 
-          className="flex items-center gap-3 cursor-pointer group relative" 
-          onClick={() => onChangeView(ViewType.SETTINGS)}
-        >
-          <div className="w-8 h-8 rounded-full bg-charcoal dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-bold shadow-soft group-hover:scale-105 transition-transform overflow-hidden">
-            {userProfile.avatarUrl ? (
-              <img src={userProfile.avatarUrl} alt={userProfile.name} className="w-full h-full object-cover" />
-            ) : (
-              userProfile.initials
-            )}
+    <>
+      {/* Backdrop for mobile - optional if we want the sidebar to feel like a sheet, but full screen was requested. 
+          Adding a subtle shadow/overlay effect anyway for depth if it slides over */}
+      
+      <aside className={sidebarClasses}>
+        {/* User Profile / Toggle Header */}
+        <div className={`
+          flex items-center pt-6 mb-2 transition-all duration-300
+          ${!showExpanded ? 'flex-col gap-4 px-0 pb-4' : 'justify-between px-5 pb-0'}
+        `}>
+          <div 
+            className="flex items-center gap-3 cursor-pointer group relative" 
+            onClick={() => handleViewChange(ViewType.SETTINGS)}
+          >
+            <div className="w-8 h-8 rounded-full bg-charcoal dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-bold shadow-soft group-hover:scale-105 transition-transform overflow-hidden">
+              {userProfile.avatarUrl ? (
+                <img src={userProfile.avatarUrl} alt={userProfile.name} className="w-full h-full object-cover" />
+              ) : (
+                userProfile.initials
+              )}
+            </div>
+            
+            {/* Full Profile Info (Expanded Only) */}
+            <div className={`overflow-hidden transition-all duration-300 ${!showExpanded ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
+               <span className="text-[13px] font-semibold text-charcoal dark:text-gray-200 group-hover:text-black dark:group-hover:text-white whitespace-nowrap">
+                 {userProfile.name}
+               </span>
+            </div>
           </div>
-          
-          {/* Full Profile Info (Expanded Only) */}
-          <div className={`overflow-hidden transition-all duration-300 ${isCompact ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
-             <span className="text-[13px] font-semibold text-charcoal dark:text-gray-200 group-hover:text-black dark:group-hover:text-white whitespace-nowrap">
-               {userProfile.name}
-             </span>
-          </div>
+
+          {/* Sidebar Toggle Button (Desktop) or Close Button (Mobile) */}
+          {isMobile ? (
+            <button 
+              onClick={onCloseMobile}
+              className="p-3 text-gray-400 hover:text-black dark:hover:text-white transition-colors rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 active:scale-95"
+            >
+              <X size={24} />
+            </button>
+          ) : (
+            <button 
+              onClick={onToggleCompact}
+              className={`
+                text-gray-400 hover:text-black dark:hover:text-white transition-colors
+                ${!showExpanded ? 'mt-2' : ''}
+              `}
+              title={isCompact ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+              {isCompact ? (lang === 'ar' ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />) : (lang === 'ar' ? <PanelLeftClose size={18} /> : <PanelRightClose size={18} />)}
+            </button>
+          )}
+        </div>
+        
+        {/* Expanded: Settings Icon next to profile */}
+        {showExpanded && (
+            <div className="px-5 mb-4 relative">
+               {/* Placeholder for spacing if needed */}
+            </div>
+        )}
+
+        {/* Navigation */}
+        <div className="mb-2 w-full flex flex-col gap-1">
+            {navItems.map((item) => {
+              const isActive = currentView === item.id;
+              const Icon = item.icon;
+              
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleViewChange(item.id)}
+                  className={`
+                    group relative flex items-center transition-all duration-200
+                    ${!showExpanded 
+                      ? 'justify-center w-[44px] h-[44px] mx-auto rounded-xl' 
+                      : 'w-full px-5 py-3'} 
+                    ${isActive 
+                      ? (!showExpanded ? 'bg-black dark:bg-white text-white dark:text-black shadow-md' : 'bg-[#F0F0F0] dark:bg-white/10 text-black dark:text-white font-medium') 
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-white/5 hover:text-black dark:hover:text-white'}
+                  `}
+                  title={!showExpanded ? item.label : undefined}
+                >
+                  {/* Expanded: Active Indicator Bar */}
+                  {showExpanded && isActive && (
+                    <div className="absolute start-0 top-0 bottom-0 w-[3px] bg-black dark:bg-white" />
+                  )}
+                  
+                  <Icon 
+                    size={!showExpanded ? 20 : 20} 
+                    className={`
+                      transition-all duration-200
+                      ${showExpanded && 'me-3'} 
+                      ${isActive ? (!showExpanded ? 'text-white dark:text-black' : 'opacity-100 text-black dark:text-white') : 'opacity-70 group-hover:opacity-100'}
+                    `} 
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                  
+                  {/* Label (Expanded Only) */}
+                  <span className={`flex-1 text-start whitespace-nowrap overflow-hidden transition-all duration-200 ${!showExpanded ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100 text-base'}`}>
+                    {item.label}
+                  </span>
+                  
+                  {/* Count */}
+                  {item.count && item.count > 0 && (
+                     <span className={`
+                       text-xs transition-all duration-200
+                       ${!showExpanded 
+                          ? 'absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full border-2 border-[#FAFAFA] dark:border-gray-800' 
+                          : (isActive ? 'font-bold text-black dark:text-white' : 'text-gray-400')}
+                     `}>
+                       {lang === 'ar' ? item.count.toLocaleString('ar-SA') : item.count}
+                     </span>
+                  )}
+                </button>
+              );
+            })}
         </div>
 
-        {/* Sidebar Toggle Button */}
-        <button 
-          onClick={onToggleCompact}
-          className={`
-            text-gray-400 hover:text-black dark:hover:text-white transition-colors
-            ${isCompact ? 'mt-2' : ''}
-          `}
-          title={isCompact ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
-          {isCompact ? (lang === 'ar' ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />) : (lang === 'ar' ? <PanelLeftClose size={18} /> : <PanelRightClose size={18} />)}
-        </button>
-      </div>
-      
-      {/* Expanded: Settings Icon next to profile */}
-      {!isCompact && (
-          <div className="px-5 mb-4 relative">
-             {/* Placeholder for spacing if needed */}
-          </div>
-      )}
-
-      {/* Navigation */}
-      <div className="mb-2 w-full flex flex-col gap-1">
-          {navItems.map((item) => {
-            const isActive = currentView === item.id;
-            const Icon = item.icon;
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => onChangeView(item.id)}
-                className={`
-                  group relative flex items-center transition-all duration-200
-                  ${isCompact 
-                    ? 'justify-center w-[44px] h-[44px] mx-auto rounded-xl' 
-                    : 'w-full px-5 py-2'}
-                  ${isActive 
-                    ? (isCompact ? 'bg-black dark:bg-white text-white dark:text-black shadow-md' : 'bg-[#F0F0F0] dark:bg-white/10 text-black dark:text-white font-medium') 
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-white/5 hover:text-black dark:hover:text-white'}
-                `}
-                title={isCompact ? item.label : undefined}
-              >
-                {/* Expanded: Active Indicator Bar */}
-                {!isCompact && isActive && (
-                  <div className="absolute start-0 top-0 bottom-0 w-[3px] bg-black dark:bg-white" />
-                )}
-                
-                <Icon 
-                  size={isCompact ? 20 : 18} 
-                  className={`
-                    transition-all duration-200
-                    ${!isCompact && 'me-3'} 
-                    ${isActive ? (isCompact ? 'text-white dark:text-black' : 'opacity-100 text-black dark:text-white') : 'opacity-70 group-hover:opacity-100'}
-                  `} 
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
-                
-                {/* Label (Expanded Only) */}
-                <span className={`flex-1 text-start whitespace-nowrap overflow-hidden transition-all duration-200 ${isCompact ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
-                  {item.label}
-                </span>
-                
-                {/* Count */}
-                {item.count && item.count > 0 && (
-                   <span className={`
-                     text-xs transition-all duration-200
-                     ${isCompact 
-                        ? 'absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full border-2 border-[#FAFAFA] dark:border-gray-800' 
-                        : (isActive ? 'font-bold text-black dark:text-white' : 'text-gray-400')}
-                   `}>
-                     {lang === 'ar' ? item.count.toLocaleString('ar-SA') : item.count}
-                   </span>
-                )}
-
-                {/* Compact Hover Tooltip (Simulated) */}
-                {isCompact && (
-                   <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50`}>
-                      {item.label}
-                   </div>
-                )}
-              </button>
-            );
-          })}
-      </div>
-
-      {/* Calendar Widget (Expanded Only) */}
-      <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isCompact ? 'max-h-0 opacity-0' : 'max-h-[300px] opacity-100'}`}>
-         <CalendarWidget selectedDate={selectedDate} onSelectDate={onSelectDate} taskCounts={calendarTaskCounts} lang={lang} />
-      </div>
-      
-      {/* Divider for compact mode */}
-      {isCompact && <div className="w-8 h-[1px] bg-gray-200 dark:bg-gray-800 my-2"></div>}
-
-      {/* Projects Section */}
-      <div className={`mt-2 w-full ${isCompact ? 'px-0 flex flex-col items-center gap-2' : 'px-5'}`}>
+        {/* Calendar Widget (Expanded Only) */}
+        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${!showExpanded ? 'max-h-0 opacity-0' : 'max-h-[300px] opacity-100'}`}>
+           <CalendarWidget selectedDate={selectedDate} onSelectDate={(d) => { onSelectDate(d); if(isMobile && onCloseMobile) onCloseMobile(); }} taskCounts={calendarTaskCounts} lang={lang} />
+        </div>
         
-        {!isCompact ? (
-          // Expanded Projects View
-          <>
-            <div className="flex items-center justify-between mb-1 group cursor-pointer">
-              <span className="text-xs font-semibold text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors uppercase tracking-wider">{t.projects}</span>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsCreatingProject(true);
-                }}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-              >
-                <Plus size={14} className="text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors" />
-              </button>
-            </div>
-            
-            {/* New Project Input */}
-            {isCreatingProject && (
-              <form onSubmit={handleCreateProjectSubmit} className="mb-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                <input
-                  autoFocus
-                  type="text"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  onBlur={() => { if(!newProjectName) setIsCreatingProject(false); }}
-                  placeholder={`${t.projects}...`}
-                  className="w-full text-[13px] px-2 py-1.5 bg-white dark:bg-white/10 border border-purple-300 dark:border-purple-700 rounded focus:outline-none text-charcoal dark:text-white placeholder-gray-400"
-                />
-              </form>
-            )}
+        {/* Divider for compact mode */}
+        {!showExpanded && <div className="w-8 h-[1px] bg-gray-200 dark:bg-gray-800 my-2"></div>}
 
-            <div className="flex flex-col gap-1">
-              {projects.map(p => {
-                const isActive = currentView === ViewType.PROJECT && selectedProjectId === p.id;
-                const count = projectTaskCounts[p.id] || 0;
-                
-                return (
-                  <button 
-                    key={p.id} 
-                    onClick={() => onSelectProject(p.id)}
-                    className={`
-                      flex items-center gap-3 py-1.5 px-2 rounded transition-colors text-[13px] group relative
-                      ${isActive ? 'bg-gray-100 dark:bg-white/10 text-black dark:text-white font-medium' : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white'}
-                    `}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${p.color} opacity-80 group-hover:opacity-100`}></span>
-                    <span className="truncate flex-1 text-start">{p.name}</span>
-                    
-                    {count > 0 && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500 font-medium group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
-                        {lang === 'ar' ? count.toLocaleString('ar-SA') : count}
-                      </span>
-                    )}
-                    
-                    {/* Delete Action (Hover Only) */}
-                    <div 
-                      role="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteProject(p.id);
+        {/* Projects Section */}
+        <div className={`mt-2 w-full ${!showExpanded ? 'px-0 flex flex-col items-center gap-2' : 'px-5'}`}>
+          
+          {showExpanded ? (
+            // Expanded Projects View
+            <>
+              <div className="flex items-center justify-between mb-1 group cursor-pointer">
+                <span className="text-xs font-semibold text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors uppercase tracking-wider">{t.projects}</span>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsCreatingProject(true);
+                  }}
+                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                >
+                  <Plus size={14} className="text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors" />
+                </button>
+              </div>
+              
+              {/* New Project Input */}
+              {isCreatingProject && (
+                <form onSubmit={handleCreateProjectSubmit} className="mb-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    onBlur={() => { if(!newProjectName) setIsCreatingProject(false); }}
+                    placeholder={`${t.projects}...`}
+                    className="w-full text-[13px] px-2 py-1.5 bg-white dark:bg-white/10 border border-purple-300 dark:border-purple-700 rounded focus:outline-none text-charcoal dark:text-white placeholder-gray-400"
+                  />
+                </form>
+              )}
+
+              <div className="flex flex-col gap-1">
+                {projects.map(p => {
+                  const isActive = currentView === ViewType.PROJECT && selectedProjectId === p.id;
+                  const count = projectTaskCounts[p.id] || 0;
+                  
+                  return (
+                    <button 
+                      key={p.id} 
+                      onClick={() => {
+                        onSelectProject(p.id);
+                        if(isMobile && onCloseMobile) onCloseMobile();
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-400 hover:text-red-500 transition-all"
-                      title="Delete Project"
+                      className={`
+                        flex items-center gap-3 py-2 px-2 rounded transition-colors text-[13px] group relative
+                        ${isActive ? 'bg-gray-100 dark:bg-white/10 text-black dark:text-white font-medium' : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white'}
+                      `}
                     >
-                       <Trash2 size={12} />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          // Compact Projects View (Colored Dots)
-          <>
-             {/* Header Icon */}
-             <div className="mb-2 text-gray-300 dark:text-gray-600">
-               <Folder size={14} />
-             </div>
-
-             {projects.map(p => {
-               const count = projectTaskCounts[p.id] || 0;
-               return (
-                 <button 
-                    key={p.id}
-                    onClick={() => onSelectProject(p.id)}
-                    className="w-[36px] h-[36px] flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-all group relative"
-                 >
-                    <div className={`w-2.5 h-2.5 rounded-full ${p.color}`}></div>
-                    <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 flex items-center gap-2`}>
-                       {p.name}
-                       {count > 0 && <span className="opacity-70 font-mono">({count})</span>}
-                    </div>
-                 </button>
-               );
-             })}
-             
-             {/* Add Project (Compact) */}
-             <button 
-               onClick={() => onToggleCompact()} 
-               className="w-[36px] h-[36px] flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 transition-all"
-               title="Expand to add project"
-             >
-               <Plus size={14} />
-             </button>
-          </>
-        )}
-      </div>
-
-      {/* Bottom Actions */}
-      <div className={`mt-auto p-5 w-full ${isCompact ? 'px-2 space-y-3' : 'space-y-1'}`}>
-         
-         {/* Search Button */}
-         <button className={`
-            flex items-center transition-colors w-full rounded-lg group relative
-            ${isCompact 
-               ? 'justify-center w-[44px] h-[44px] mx-auto text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white' 
-               : 'gap-3 py-2 px-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'}
-         `}>
-            <Search size={18} />
-            {!isCompact && (
-              <>
-                <span className="text-sm font-medium">{t.search}</span>
-                <span className="ms-auto text-[10px] font-mono bg-gray-200 dark:bg-gray-700 px-1.5 rounded text-gray-500 dark:text-gray-400">Cmd K</span>
-              </>
-            )}
-            
-            {isCompact && (
-               <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50`}>
-                  {t.search}
+                      <span className={`w-2 h-2 rounded-full ${p.color} opacity-80 group-hover:opacity-100`}></span>
+                      <span className="truncate flex-1 text-start">{p.name}</span>
+                      
+                      {count > 0 && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 font-medium group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+                          {lang === 'ar' ? count.toLocaleString('ar-SA') : count}
+                        </span>
+                      )}
+                      
+                      {/* Delete Action (Hover Only) */}
+                      <div 
+                        role="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteProject(p.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-400 hover:text-red-500 transition-all"
+                        title="Delete Project"
+                      >
+                         <Trash2 size={12} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            // Compact Projects View (Colored Dots)
+            <>
+               {/* Header Icon */}
+               <div className="mb-2 text-gray-300 dark:text-gray-600">
+                 <Folder size={14} />
                </div>
-            )}
-         </button>
 
-         {/* Theme Toggle */}
-         <button 
-            onClick={onToggleTheme}
-            className={`
+               {projects.map(p => {
+                 const count = projectTaskCounts[p.id] || 0;
+                 return (
+                   <button 
+                      key={p.id}
+                      onClick={() => onSelectProject(p.id)}
+                      className="w-[36px] h-[36px] flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-all group relative"
+                   >
+                      <div className={`w-2.5 h-2.5 rounded-full ${p.color}`}></div>
+                      <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 flex items-center gap-2`}>
+                         {p.name}
+                         {count > 0 && <span className="opacity-70 font-mono">({count})</span>}
+                      </div>
+                   </button>
+                 );
+               })}
+               
+               {/* Add Project (Compact) */}
+               <button 
+                 onClick={() => onToggleCompact()} 
+                 className="w-[36px] h-[36px] flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 transition-all"
+                 title="Expand to add project"
+               >
+                 <Plus size={14} />
+               </button>
+            </>
+          )}
+        </div>
+
+        {/* Bottom Actions */}
+        <div className={`mt-auto p-5 w-full ${!showExpanded ? 'px-2 space-y-3' : 'space-y-1'}`}>
+           
+           {/* Search Button */}
+           <button className={`
               flex items-center transition-colors w-full rounded-lg group relative
-              ${isCompact 
-                ? 'justify-center w-[44px] h-[44px] mx-auto text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white' 
-                : 'gap-3 py-2 px-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'}
-            `}
-         >
-           {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-           {!isCompact && <span className="text-sm font-medium">{isDarkMode ? t.lightMode : t.darkMode}</span>}
+              ${!showExpanded 
+                 ? 'justify-center w-[44px] h-[44px] mx-auto text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white' 
+                 : 'gap-3 py-2 px-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'}
+           `}>
+              <Search size={18} />
+              {showExpanded && (
+                <>
+                  <span className="text-sm font-medium">{t.search}</span>
+                  <span className="ms-auto text-[10px] font-mono bg-gray-200 dark:bg-gray-700 px-1.5 rounded text-gray-500 dark:text-gray-400">Cmd K</span>
+                </>
+              )}
+              
+              {!showExpanded && (
+                 <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50`}>
+                    {t.search}
+                 </div>
+              )}
+           </button>
 
-           {isCompact && (
-               <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50`}>
-                  {isDarkMode ? t.lightMode : t.darkMode}
-               </div>
-            )}
-         </button>
+           {/* Theme Toggle */}
+           <button 
+              onClick={onToggleTheme}
+              className={`
+                flex items-center transition-colors w-full rounded-lg group relative
+                ${!showExpanded 
+                  ? 'justify-center w-[44px] h-[44px] mx-auto text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white' 
+                  : 'gap-3 py-2 px-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'}
+              `}
+           >
+             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+             {showExpanded && <span className="text-sm font-medium">{isDarkMode ? t.lightMode : t.darkMode}</span>}
 
-         {/* Language Toggle */}
-         <button 
-            onClick={onToggleLang}
-            className={`
-              flex items-center transition-colors w-full rounded-lg group relative
-              ${isCompact 
-                ? 'justify-center w-[44px] h-[44px] mx-auto text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white' 
-                : 'gap-3 py-2 px-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'}
-            `}
-         >
-           <Languages size={18} />
-           {!isCompact && <span className="text-sm font-medium">{lang === 'en' ? 'Arabic' : 'English'}</span>}
+             {!showExpanded && (
+                 <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50`}>
+                    {isDarkMode ? t.lightMode : t.darkMode}
+                 </div>
+              )}
+           </button>
 
-           {isCompact && (
-               <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50`}>
-                  {lang === 'en' ? 'Arabic' : 'English'}
-               </div>
-            )}
-         </button>
+           {/* Language Toggle */}
+           <button 
+              onClick={onToggleLang}
+              className={`
+                flex items-center transition-colors w-full rounded-lg group relative
+                ${!showExpanded 
+                  ? 'justify-center w-[44px] h-[44px] mx-auto text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white' 
+                  : 'gap-3 py-2 px-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'}
+              `}
+           >
+             <Languages size={18} />
+             {showExpanded && <span className="text-sm font-medium">{lang === 'en' ? 'Arabic' : 'English'}</span>}
 
-         {/* Settings */}
-         {isCompact && (
-            <button 
-              onClick={() => onChangeView(ViewType.SETTINGS)}
-              className="flex items-center justify-center w-[44px] h-[44px] mx-auto text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white rounded-lg group relative"
-            >
-              <Settings size={18} />
-               <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50`}>
-                  {t.settings}
-               </div>
-            </button>
-         )}
-      </div>
-    </aside>
+             {!showExpanded && (
+                 <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50`}>
+                    {lang === 'en' ? 'Arabic' : 'English'}
+                 </div>
+              )}
+           </button>
+
+           {/* Settings */}
+           {!showExpanded && (
+              <button 
+                onClick={() => handleViewChange(ViewType.SETTINGS)}
+                className="flex items-center justify-center w-[44px] h-[44px] mx-auto text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white rounded-lg group relative"
+              >
+                <Settings size={18} />
+                 <div className={`absolute ${lang === 'ar' ? 'right-full mr-2' : 'left-full ml-2'} px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-black text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50`}>
+                    {t.settings}
+                 </div>
+              </button>
+           )}
+        </div>
+      </aside>
+    </>
   );
 };

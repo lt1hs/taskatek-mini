@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TaskItem } from './components/TaskItem';
@@ -5,7 +6,7 @@ import { AiChatPanel } from './components/AiChatPanel';
 import { Task, ViewType, Subtask, Priority, Project, Language, UserProfile, Attachment } from './types';
 import { analyzeTaskWithAI } from './services/geminiService';
 import { translations } from './translations';
-import { Plus, SlidersHorizontal, Flag, Calendar, Inbox as InboxIcon, Sparkles, Loader2, FolderOpen, Languages, Moon, Sun, User, Bell, Info, Pencil, Check, X, Camera, Quote } from 'lucide-react';
+import { Plus, SlidersHorizontal, Flag, Calendar, Inbox as InboxIcon, Sparkles, Loader2, FolderOpen, Languages, Moon, Sun, User, Bell, Info, Pencil, Check, X, Camera, Quote, Menu } from 'lucide-react';
 
 const initialProjects: Project[] = [
   { id: 'p1', name: 'Personal', color: 'bg-emerald-500' },
@@ -95,6 +96,10 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false); // "Open" means Expanded (380px), "False" means Compact (60px)
   const [chatContextTask, setChatContextTask] = useState<Task | null>(null);
   
+  // Mobile Responsive State
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   // AI Analysis State
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [enhancedData, setEnhancedData] = useState<{
@@ -112,6 +117,24 @@ const App: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editProfileForm, setEditProfileForm] = useState<UserProfile>(userProfile);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Resize Handler ---
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024; // 1024px breakpoint for tablet/mobile
+      setIsMobile(mobile);
+      if (!mobile) {
+        // Reset mobile states when switching to desktop
+        setIsMobileSidebarOpen(false);
+      }
+    };
+
+    // Initial check
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // --- Theme Management ---
   useEffect(() => {
@@ -356,8 +379,6 @@ const App: React.FC = () => {
   };
 
   const handleAddAttachment = (taskId: string, file: File) => {
-    // In a real app, upload to server. Here, use object URL/base64 for demo.
-    // Simulating upload delay for effect if needed, but here synchronous.
     const newAttachment: Attachment = {
       id: `att-${Date.now()}`,
       name: file.name,
@@ -462,7 +483,6 @@ const App: React.FC = () => {
   };
 
   // --- Overall Progress Calculation ---
-  // Helper to get ALL tasks relevant to the current view (including completed ones) for accurate progress
   const getProgressTasks = () => {
     switch (view) {
       case ViewType.COMPLETED:
@@ -477,7 +497,6 @@ const App: React.FC = () => {
         return tasks.filter(t => t.project === selectedProjectId);
       case ViewType.INBOX:
       default:
-        // For Inbox/Home, we consider all tasks for "Life Progress"
         return tasks;
     }
   };
@@ -539,8 +558,12 @@ const App: React.FC = () => {
     return view;
   };
 
+  // Layout styles - Explicitly handling responsiveness for JIT
+  const mainContentMarginLeft = isMobile ? 'ms-0' : (isSidebarCompact ? 'ms-[80px]' : 'ms-[280px]');
+  const mainContentMarginRight = isMobile ? 'me-0' : (isChatOpen ? 'me-[380px]' : 'me-[60px]');
+
   return (
-    <div className="flex min-h-screen bg-white dark:bg-dark-bg text-charcoal dark:text-gray-200 font-sans selection:bg-gray-200 dark:selection:bg-gray-800 overflow-x-hidden transition-colors duration-300">
+    <div className="flex min-h-screen bg-white dark:bg-dark-bg text-charcoal dark:text-gray-200 font-sans selection:bg-gray-200 dark:selection:bg-gray-800 overflow-x-hidden transition-colors duration-300 w-full">
       <Sidebar 
         currentView={view} 
         onChangeView={setView} 
@@ -561,41 +584,64 @@ const App: React.FC = () => {
         lang={language}
         onToggleLang={toggleLanguage}
         userProfile={userProfile}
+        isMobile={isMobile}
+        isOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       <main 
         className={`
-          flex-1 flex flex-col min-h-screen relative transition-all duration-300 ease-in-out
-          ${isSidebarCompact ? 'ms-[80px]' : 'ms-[280px]'}
-          ${isChatOpen ? 'me-[380px]' : 'me-[60px]'}
+          flex-1 flex flex-col min-h-screen relative transition-all duration-300 ease-in-out w-full
+          ${mainContentMarginLeft} ${mainContentMarginRight}
         `}
       >
         {/* Header */}
-        <header className="h-16 px-10 flex items-center justify-between sticky top-0 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md z-20 border-b border-transparent dark:border-dark-border transition-colors duration-300">
-           <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-tight text-charcoal dark:text-white transition-colors">{getHeaderTitle()}</h1>
-              {view === ViewType.CALENDAR_DATE && (
-                 <span className="text-xs text-gray-400 font-medium mt-1 px-2">
-                   {selectedDate.toLocaleString(language === 'ar' ? 'ar-SA' : 'default', { year: 'numeric' })}
-                 </span>
-              )}
-           </div>
+        <header className="h-16 px-4 lg:px-10 flex items-center justify-between sticky top-0 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md z-20 border-b border-transparent dark:border-dark-border transition-colors duration-300 w-full">
            <div className="flex items-center gap-3">
-              <button className="p-2 text-gray-400 hover:text-black dark:hover:text-white transition-colors rounded-full hover:bg-gray-50 dark:hover:bg-gray-800">
-                <SlidersHorizontal size={18} strokeWidth={1.5} />
-              </button>
+              {isMobile && (
+                 <button 
+                   onClick={() => setIsMobileSidebarOpen(true)}
+                   className="p-2 -ml-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                 >
+                   <Menu size={24} strokeWidth={1.5} />
+                 </button>
+              )}
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-semibold tracking-tight text-charcoal dark:text-white transition-colors">{getHeaderTitle()}</h1>
+                {view === ViewType.CALENDAR_DATE && (
+                   <span className="text-xs text-gray-400 font-medium mt-1 px-2">
+                     {selectedDate.toLocaleString(language === 'ar' ? 'ar-SA' : 'default', { year: 'numeric' })}
+                   </span>
+                )}
+              </div>
+           </div>
+           
+           <div className="flex items-center gap-3">
+              {isMobile && (
+                 <button 
+                   onClick={() => setIsChatOpen(true)}
+                   className="p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-full transition-colors"
+                 >
+                   <Sparkles size={24} strokeWidth={1.5} />
+                 </button>
+              )}
+              {!isMobile && (
+                <button className="p-2 text-gray-400 hover:text-black dark:hover:text-white transition-colors rounded-full hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <SlidersHorizontal size={18} strokeWidth={1.5} />
+                </button>
+              )}
            </div>
         </header>
 
-        <div className="flex-1 px-10 max-w-4xl mx-auto w-full pb-24 pt-4">
+        <div className="flex-1 px-4 lg:px-10 max-w-4xl mx-auto w-full pb-24 pt-4">
           
           {view === ViewType.SETTINGS ? (
             /* Settings Page */
             <div className="max-w-2xl mx-auto py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* Profile Card */}
-              <div className="bg-white dark:bg-dark-surface rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-800 flex items-start gap-6 mb-8 relative">
+              <div className="bg-white dark:bg-dark-surface rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-800 flex items-start gap-6 mb-8 relative flex-col sm:flex-row">
                   {/* Avatar Section */}
-                  <div className="relative group/avatar">
+                  <div className="relative group/avatar mx-auto sm:mx-0">
                     <div 
                         onClick={() => isEditingProfile && fileInputRef.current?.click()}
                         className={`w-20 h-20 rounded-full bg-charcoal dark:bg-white text-white dark:text-black flex items-center justify-center text-2xl font-bold shadow-md flex-shrink-0 overflow-hidden ${isEditingProfile ? 'cursor-pointer' : ''}`}
@@ -626,7 +672,7 @@ const App: React.FC = () => {
                   </div>
                   
                   {isEditingProfile ? (
-                    <div className="flex-1 space-y-3">
+                    <div className="flex-1 space-y-3 w-full">
                       <div>
                         <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider block mb-1">{t.name}</label>
                         <input 
@@ -661,15 +707,15 @@ const App: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1">
-                        <div className="flex items-center justify-between">
+                    <div className="flex-1 w-full text-center sm:text-left">
+                        <div className="flex items-center justify-center sm:justify-between">
                            <h2 className="text-xl font-bold text-charcoal dark:text-white">{userProfile.name}</h2>
                            <button 
                               onClick={() => {
                                 setEditProfileForm(userProfile);
                                 setIsEditingProfile(true);
                               }}
-                              className="p-2 text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                              className="p-2 text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors ml-2"
                               title={t.editProfile}
                            >
                              <Pencil size={16} />
@@ -822,8 +868,8 @@ const App: React.FC = () => {
                      
                      {/* Extended Input Actions */}
                      {isInputFocused && (
-                       <div className="px-4 pb-3 flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-200">
-                          <div className="flex items-center gap-2">
+                       <div className="px-4 pb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between animate-in fade-in slide-in-from-top-1 duration-200 gap-3 sm:gap-0">
+                          <div className="flex items-center gap-2 flex-wrap">
                              <button 
                                 type="button"
                                 className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-md hover:text-black dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600 transition-all"
@@ -849,7 +895,7 @@ const App: React.FC = () => {
                              </div>
                              
                              {/* AI Assistant Button */}
-                             <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+                             <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1 hidden sm:block"></div>
                              
                              <button
                                 type="button"
@@ -874,7 +920,7 @@ const App: React.FC = () => {
                           <button 
                             type="submit" 
                             disabled={!newTaskInput.trim()}
-                            className="bg-black dark:bg-white text-white dark:text-black px-3 py-1 rounded-md text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-opacity hover:bg-gray-800 dark:hover:bg-gray-200"
+                            className="bg-black dark:bg-white text-white dark:text-black px-3 py-1 rounded-md text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-opacity hover:bg-gray-800 dark:hover:bg-gray-200 w-full sm:w-auto"
                           >
                             {t.addTaskBtn}
                           </button>
@@ -930,11 +976,12 @@ const App: React.FC = () => {
 
       {/* AI Chat Panel (Right Sidebar) */}
       <AiChatPanel 
-        isOpen={isChatOpen} 
+        isOpen={isMobile ? (isChatOpen && isMobile) : isChatOpen} 
         onToggle={() => setIsChatOpen(!isChatOpen)} 
         onAddTasks={handleAiTaskCreation}
         onUpdateTask={handleAiTaskUpdate}
         activeTask={chatContextTask}
+        isMobile={isMobile}
       />
     </div>
   );

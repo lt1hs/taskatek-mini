@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Bot, User, Loader2, Zap, FileText, PanelRightClose, PanelRightOpen, ArrowLeftToLine } from 'lucide-react';
+import { Send, Sparkles, Bot, User, Loader2, Zap, FileText, PanelRightClose, PanelRightOpen, ArrowLeftToLine, X } from 'lucide-react';
 import { createChatSession } from '../services/geminiService';
 import { ChatMessage, Task } from '../types';
 import { GenerateContentResponse } from '@google/genai';
@@ -10,9 +11,10 @@ interface AiChatPanelProps {
   onAddTasks: (data: any) => void;
   onUpdateTask: (data: any) => void;
   activeTask?: Task | null;
+  isMobile?: boolean;
 }
 
-export const AiChatPanel: React.FC<AiChatPanelProps> = ({ isOpen, onToggle, onAddTasks, onUpdateTask, activeTask }) => {
+export const AiChatPanel: React.FC<AiChatPanelProps> = ({ isOpen, onToggle, onAddTasks, onUpdateTask, activeTask, isMobile = false }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -238,14 +240,16 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ isOpen, onToggle, onAd
     }
   };
 
+  // Dynamic styles for sidebar type behavior
+  const containerClasses = isMobile
+    ? `fixed inset-0 z-50 w-full bg-white dark:bg-[#111] transition-transform duration-300 flex flex-col h-[100dvh] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`
+    : `fixed right-0 top-0 h-full bg-white dark:bg-[#111] border-l border-gray-200 dark:border-dark-border z-40 flex flex-col transition-all duration-300 ease-in-out ${isOpen ? 'w-[380px]' : 'w-[60px]'}`;
+
   return (
-    <div className={`
-      fixed right-0 top-0 h-full bg-white dark:bg-[#111] border-l border-gray-200 dark:border-dark-border z-40 flex flex-col transition-all duration-300 ease-in-out
-      ${isOpen ? 'w-[380px]' : 'w-[60px]'}
-    `}>
+    <div className={containerClasses}>
       
-      {/* Compact View Overlay */}
-      {!isOpen && (
+      {/* Compact View Overlay (Desktop Only) */}
+      {!isMobile && !isOpen && (
         <button 
           onClick={onToggle}
           className="h-full w-full flex flex-col items-center pt-6 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors gap-8 group"
@@ -268,11 +272,11 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ isOpen, onToggle, onAd
         </button>
       )}
 
-      {/* Expanded View Content */}
-      <div className={`flex flex-col h-full w-full ${!isOpen ? 'opacity-0 pointer-events-none hidden' : 'opacity-100 flex'}`}>
+      {/* Expanded View Content (Visible if open, or always processed if mobile open) */}
+      <div className={`flex flex-col h-full w-full ${!isOpen && !isMobile ? 'opacity-0 pointer-events-none hidden' : 'opacity-100 flex'}`}>
         
         {/* Header */}
-        <div className="flex flex-col border-b border-gray-100 dark:border-dark-border bg-white/80 dark:bg-[#111]/80 backdrop-blur-sm">
+        <div className="flex flex-col border-b border-gray-100 dark:border-dark-border bg-white/80 dark:bg-[#111]/80 backdrop-blur-sm flex-shrink-0">
           <div className="flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-2.5">
                <div className="p-1.5 bg-purple-50 dark:bg-purple-900/30 rounded-md text-purple-600 dark:text-purple-300">
@@ -284,13 +288,13 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ isOpen, onToggle, onAd
                </div>
             </div>
             
-            {/* Collapse Button */}
+            {/* Collapse Button / Close Button */}
             <button 
               onClick={onToggle}
               className="p-2 text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 rounded-full transition-colors"
               title="Collapse Sidebar"
             >
-              <PanelRightClose size={18} />
+              {isMobile ? <X size={20} /> : <PanelRightClose size={18} />}
             </button>
           </div>
 
@@ -355,7 +359,7 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ isOpen, onToggle, onAd
         </div>
 
         {/* Input Area */}
-        <div className="p-4 border-t border-gray-100 dark:border-dark-border bg-white dark:bg-[#111]">
+        <div className="p-4 border-t border-gray-100 dark:border-dark-border bg-white dark:bg-[#111] flex-shrink-0">
           <form onSubmit={handleSend} className="relative">
             <input
               type="text"
