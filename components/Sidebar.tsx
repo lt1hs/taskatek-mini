@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Inbox, 
@@ -19,6 +18,7 @@ import {
   Languages,
   X
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ViewType, NavItem, Project, Language, UserProfile } from '../types';
 import { translations } from '../translations';
 
@@ -107,7 +107,11 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedDate, onSelectD
     : ['S','M','T','W','T','F','S'];
 
   return (
-    <div className="px-5 pb-8 pt-2 animate-in fade-in duration-500">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }} 
+      animate={{ opacity: 1, y: 0 }}
+      className="px-5 pb-8 pt-2"
+    >
       <div className="flex items-center justify-between mb-4 pl-1 rtl:pr-1">
         <span className="text-xs font-semibold text-charcoal dark:text-gray-200 tracking-wide">{currentMonth} {currentYear}</span>
         <div className="flex items-center gap-1">
@@ -125,7 +129,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedDate, onSelectD
         ))}
         {days}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -233,13 +237,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="flex items-center gap-3 cursor-pointer group relative" 
             onClick={() => handleViewChange(ViewType.SETTINGS)}
           >
-            <div className="w-8 h-8 rounded-full bg-charcoal dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-bold shadow-soft group-hover:scale-105 transition-transform overflow-hidden">
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-8 h-8 rounded-full bg-charcoal dark:bg-white text-white dark:text-black flex items-center justify-center text-xs font-bold shadow-soft overflow-hidden"
+            >
               {userProfile.avatarUrl ? (
                 <img src={userProfile.avatarUrl} alt={userProfile.name} className="w-full h-full object-cover" />
               ) : (
                 userProfile.initials
               )}
-            </div>
+            </motion.div>
             
             {/* Full Profile Info (Expanded Only) */}
             <div className={`overflow-hidden transition-all duration-300 ${!showExpanded ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
@@ -280,13 +288,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation */}
         <div className="mb-2 w-full flex flex-col gap-1">
-            {navItems.map((item) => {
+            {navItems.map((item, i) => {
               const isActive = currentView === item.id;
               const Icon = item.icon;
               
               return (
-                <button
+                <motion.button
                   key={item.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
                   onClick={() => handleViewChange(item.id)}
                   className={`
                     group relative flex items-center transition-all duration-200
@@ -301,7 +312,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   {/* Expanded: Active Indicator Bar */}
                   {showExpanded && isActive && (
-                    <div className="absolute start-0 top-0 bottom-0 w-[3px] bg-black dark:bg-white" />
+                    <motion.div 
+                      layoutId="activeNavIndicator"
+                      className="absolute start-0 top-0 bottom-0 w-[3px] bg-black dark:bg-white" 
+                    />
                   )}
                   
                   <Icon 
@@ -330,7 +344,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                        {lang === 'ar' ? item.count.toLocaleString('ar-SA') : item.count}
                      </span>
                   )}
-                </button>
+                </motion.button>
               );
             })}
         </div>
@@ -364,7 +378,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               
               {/* New Project Input */}
               {isCreatingProject && (
-                <form onSubmit={handleCreateProjectSubmit} className="mb-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <motion.form 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  onSubmit={handleCreateProjectSubmit} 
+                  className="mb-2"
+                >
                   <input
                     autoFocus
                     type="text"
@@ -374,7 +393,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     placeholder={`${t.projects}...`}
                     className="w-full text-[13px] px-2 py-1.5 bg-white dark:bg-white/10 border border-purple-300 dark:border-purple-700 rounded focus:outline-none text-charcoal dark:text-white placeholder-gray-400"
                   />
-                </form>
+                </motion.form>
               )}
 
               <div className="flex flex-col gap-1">

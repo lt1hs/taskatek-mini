@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TaskItem } from './components/TaskItem';
@@ -7,6 +6,7 @@ import { Task, ViewType, Subtask, Priority, Project, Language, UserProfile, Atta
 import { analyzeTaskWithAI } from './services/geminiService';
 import { translations } from './translations';
 import { Plus, SlidersHorizontal, Flag, Calendar, Inbox as InboxIcon, Sparkles, Loader2, FolderOpen, Languages, Moon, Sun, User, Bell, Info, Pencil, Check, X, Camera, Quote, Menu } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const initialProjects: Project[] = [
   { id: 'p1', name: 'Personal', color: 'bg-emerald-500' },
@@ -637,12 +637,19 @@ const App: React.FC = () => {
           
           {view === ViewType.SETTINGS ? (
             /* Settings Page */
-            <div className="max-w-2xl mx-auto py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="max-w-2xl mx-auto py-8"
+            >
               {/* Profile Card */}
               <div className="bg-white dark:bg-dark-surface rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-800 flex items-start gap-6 mb-8 relative flex-col sm:flex-row">
                   {/* Avatar Section */}
                   <div className="relative group/avatar mx-auto sm:mx-0">
-                    <div 
+                    <motion.div 
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => isEditingProfile && fileInputRef.current?.click()}
                         className={`w-20 h-20 rounded-full bg-charcoal dark:bg-white text-white dark:text-black flex items-center justify-center text-2xl font-bold shadow-md flex-shrink-0 overflow-hidden ${isEditingProfile ? 'cursor-pointer' : ''}`}
                     >
@@ -651,7 +658,7 @@ const App: React.FC = () => {
                         ) : (
                              userProfile.initials
                         )}
-                    </div>
+                    </motion.div>
                     
                     {/* Camera Overlay in Edit Mode */}
                     {isEditingProfile && (
@@ -799,13 +806,18 @@ const App: React.FC = () => {
                       </div>
                   </section>
               </div>
-            </div>
+            </motion.div>
           ) : (
             /* Main Task View */
             <>
               {/* Quote & Overall Progress */}
               {view !== ViewType.COMPLETED && (
-                <div className="mb-6 animate-in fade-in duration-500">
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="mb-6"
+                >
                    <div className="flex flex-col gap-3">
                       <div className="flex items-start gap-2">
                          <Quote size={14} className="text-purple-400 flex-shrink-0 mt-1 transform scale-x-[-1]" />
@@ -822,25 +834,32 @@ const App: React.FC = () => {
                               <span>{Math.round(overallProgress)}%</span>
                            </div>
                            <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-black dark:bg-white transition-all duration-700 ease-out" 
-                                style={{ width: `${overallProgress}%` }} 
+                              <motion.div 
+                                className="h-full bg-black dark:bg-white" 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${overallProgress}%` }}
+                                transition={{ duration: 0.8, ease: "easeOut" }}
                               />
                            </div>
                         </div>
                       )}
                    </div>
-                </div>
+                </motion.div>
               )}
 
               {/* Smart Input Area */}
               {view !== ViewType.COMPLETED && (
-                <div className={`
-                  mb-8 rounded-xl transition-all duration-300 border
-                  ${isInputFocused 
-                    ? 'bg-white dark:bg-dark-surface shadow-soft dark:shadow-none border-transparent ring-1 ring-gray-100 dark:ring-gray-700' 
-                    : 'bg-transparent border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-700'}
-                `}>
+                <motion.div 
+                  initial={{ scale: 0.98, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className={`
+                    mb-8 rounded-xl transition-all duration-300 border
+                    ${isInputFocused 
+                      ? 'bg-white dark:bg-dark-surface shadow-soft dark:shadow-none border-transparent ring-1 ring-gray-100 dark:ring-gray-700' 
+                      : 'bg-transparent border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-700'}
+                  `}
+                >
                   <form onSubmit={addTask} className="relative">
                      <div className="flex items-center px-4 py-3">
                        <div className={`me-3 transition-colors ${isInputFocused ? 'text-black dark:text-white' : 'text-gray-400'}`}>
@@ -867,8 +886,14 @@ const App: React.FC = () => {
                      </div>
                      
                      {/* Extended Input Actions */}
+                     <AnimatePresence>
                      {isInputFocused && (
-                       <div className="px-4 pb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between animate-in fade-in slide-in-from-top-1 duration-200 gap-3 sm:gap-0">
+                       <motion.div 
+                         initial={{ height: 0, opacity: 0 }}
+                         animate={{ height: 'auto', opacity: 1 }}
+                         exit={{ height: 0, opacity: 0 }}
+                         className="px-4 pb-3 overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0"
+                       >
                           <div className="flex items-center gap-2 flex-wrap">
                              <button 
                                 type="button"
@@ -924,16 +949,23 @@ const App: React.FC = () => {
                           >
                             {t.addTaskBtn}
                           </button>
-                       </div>
+                       </motion.div>
                      )}
+                     </AnimatePresence>
                   </form>
-                </div>
+                </motion.div>
               )}
 
               {/* Task List */}
               <div className="flex flex-col gap-1">
+                <AnimatePresence mode='popLayout'>
                 {getFilteredTasks().length === 0 ? (
-                   <div className="flex flex-col items-center justify-center py-24 text-gray-300 dark:text-gray-600 transition-colors">
+                   <motion.div 
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     exit={{ opacity: 0 }}
+                     className="flex flex-col items-center justify-center py-24 text-gray-300 dark:text-gray-600 transition-colors"
+                   >
                       {view === ViewType.PROJECT && selectedProjectId ? (
                         <>
                           <FolderOpen size={48} strokeWidth={1} className="mb-4 opacity-50" />
@@ -949,7 +981,7 @@ const App: React.FC = () => {
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t.enjoyDay}</p>
                         </>
                       )}
-                   </div>
+                   </motion.div>
                 ) : (
                    getFilteredTasks().map(task => (
                     <TaskItem 
@@ -968,6 +1000,7 @@ const App: React.FC = () => {
                     />
                    ))
                 )}
+                </AnimatePresence>
               </div>
             </>
           )}

@@ -1,6 +1,6 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, Bot, User, Loader2, Zap, FileText, PanelRightClose, PanelRightOpen, ArrowLeftToLine, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createChatSession } from '../services/geminiService';
 import { ChatMessage, Task } from '../types';
 import { GenerateContentResponse } from '@google/genai';
@@ -300,20 +300,27 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ isOpen, onToggle, onAd
 
           {/* Active Task Context Banner */}
           {activeTask && (
-            <div className="px-5 py-2 bg-purple-50/50 dark:bg-purple-900/20 border-t border-purple-50 dark:border-purple-900/30 flex items-center gap-2">
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              className="px-5 py-2 bg-purple-50/50 dark:bg-purple-900/20 border-t border-purple-50 dark:border-purple-900/30 flex items-center gap-2"
+            >
               <FileText size={12} className="text-purple-600 dark:text-purple-400" />
               <span className="text-[11px] font-medium text-purple-900 dark:text-purple-300 truncate max-w-[250px]">
                 Discussing: {activeTask.title}
               </span>
-            </div>
+            </motion.div>
           )}
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-hide bg-gray-50/30 dark:bg-[#0f0f0f]">
+          <AnimatePresence>
           {messages.map((msg) => (
-            <div 
+            <motion.div 
               key={msg.id} 
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
               className={`flex items-start gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
               {/* Avatar */}
@@ -336,12 +343,17 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ isOpen, onToggle, onAd
                    <span className="inline-block w-1.5 h-3 ml-1 align-middle bg-purple-400 animate-pulse"></span>
                 )}
               </div>
-            </div>
+            </motion.div>
           ))}
+          </AnimatePresence>
           
           {/* Typing / Action Indicators */}
           {(isTyping || isExecutingTool) && !messages[messages.length - 1]?.isStreaming && messages[messages.length - 1]?.role === 'user' && (
-             <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs ml-12 animate-pulse">
+             <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs ml-12 animate-pulse"
+             >
                 {isExecutingTool ? (
                   <>
                     <Zap size={10} className="fill-yellow-400 text-yellow-400" />
@@ -353,7 +365,7 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ isOpen, onToggle, onAd
                     <span>Thinking...</span>
                   </>
                 )}
-             </div>
+             </motion.div>
           )}
           <div ref={messagesEndRef} />
         </div>
