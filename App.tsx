@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TaskItem } from './components/TaskItem';
 import { AiChatPanel } from './components/AiChatPanel';
-import { Task, ViewType, Subtask, Priority, Project, Language, UserProfile } from './types';
+import { Task, ViewType, Subtask, Priority, Project, Language, UserProfile, Attachment } from './types';
 import { analyzeTaskWithAI } from './services/geminiService';
 import { translations } from './translations';
-import { Plus, SlidersHorizontal, Flag, Calendar, Inbox as InboxIcon, Sparkles, Loader2, FolderOpen, Languages, Moon, Sun, User, Bell, Info, Pencil, Check, X, Camera } from 'lucide-react';
+import { Plus, SlidersHorizontal, Flag, Calendar, Inbox as InboxIcon, Sparkles, Loader2, FolderOpen, Languages, Moon, Sun, User, Bell, Info, Pencil, Check, X, Camera, Quote } from 'lucide-react';
 
 const initialProjects: Project[] = [
   { id: 'p1', name: 'Personal', color: 'bg-emerald-500' },
@@ -24,7 +23,9 @@ const initialTasks: Task[] = [
     dueDate: new Date(),
     priority: Priority.HIGH,
     subtasks: [],
-    motivation: 'You crunched the numbers last time and found gold. This report is your victory lap.'
+    motivation: 'You crunched the numbers last time and found gold. This report is your victory lap.',
+    notes: 'Key metrics to look for: \n- CTR\n- Conversion Rate\n- CAC',
+    attachments: []
   },
   {
     id: '2',
@@ -35,16 +36,39 @@ const initialTasks: Task[] = [
     subtasks: [
       { id: '2-1', title: 'Milk', completed: false },
       { id: '2-2', title: 'Bread', completed: true }
-    ]
+    ],
+    attachments: []
   },
   {
     id: '3',
     title: 'Schedule dentist appointment',
     completed: true,
     priority: Priority.LOW,
-    subtasks: []
+    subtasks: [],
+    attachments: []
   }
 ];
+
+const motivationalQuotes: Record<Language, string[]> = {
+  en: [
+    "The secret of getting ahead is getting started.",
+    "Focus on being productive instead of busy.",
+    "Small steps every day lead to big results.",
+    "You don't have to see the whole staircase, just take the first step.",
+    "Done is better than perfect.",
+    "Your future is created by what you do today, not tomorrow.",
+    "Simplicity boils down to two steps: Identify the essential. Eliminate the rest."
+  ],
+  ar: [
+    "سر التقدم هو البداية.",
+    "ركز على الإنتاجية لا الانشغال.",
+    "خطوات صغيرة كل يوم تؤدي إلى نتائج كبيرة.",
+    "لا تحتاج لرؤية الدرج كاملاً، فقط اصعد الدرجة الأولى.",
+    "إنجاز العمل خير من كماله.",
+    "مستقبلك يُصنع بما تفعله اليوم، لا غداً.",
+    "البساطة تتلخص في خطوتين: حدد الضروري، وتخلص من الباقي."
+  ]
+};
 
 const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -62,6 +86,7 @@ const App: React.FC = () => {
   // Theme & Language State
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [language, setLanguage] = useState<Language>('en');
+  const [currentQuote, setCurrentQuote] = useState('');
 
   // Sidebar State (Left)
   const [isSidebarCompact, setIsSidebarCompact] = useState(false);
@@ -102,6 +127,13 @@ const App: React.FC = () => {
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
   }, [language]);
+
+  // --- Quote Management ---
+  useEffect(() => {
+    const quotes = motivationalQuotes[language];
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    setCurrentQuote(randomQuote);
+  }, [language]); 
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   const toggleLanguage = () => setLanguage(prev => prev === 'en' ? 'ar' : 'en');
@@ -205,7 +237,9 @@ const App: React.FC = () => {
       motivation: enhancedData?.motivation,
       dueDate: taskDueDate,
       project: taskProject,
-      priority: selectedPriority
+      priority: selectedPriority,
+      notes: '',
+      attachments: []
     };
 
     setTasks([newTask, ...tasks]);
@@ -228,7 +262,9 @@ const App: React.FC = () => {
       subtasks: Array.isArray(subtasks) 
         ? subtasks.map((st: string, i: number) => ({ id: `ai-sub-${Date.now()}-${i}`, title: st, completed: false }))
         : [],
-      motivation: motivation || "Let's get this done!"
+      motivation: motivation || "Let's get this done!",
+      notes: '',
+      attachments: []
     };
 
     setTasks(prev => [newTask, ...prev]);
@@ -298,6 +334,50 @@ const App: React.FC = () => {
           sub.id === subtaskId ? { ...sub, completed: !sub.completed } : sub
         )
       };
+    }));
+  };
+
+  const handleAddSubtask = (taskId: string, title: string) => {
+    setTasks(tasks.map(task => {
+      if (task.id !== taskId) return task;
+      const newSubtask: Subtask = {
+        id: `sub-${Date.now()}`,
+        title,
+        completed: false
+      };
+      return { ...task, subtasks: [...task.subtasks, newSubtask] };
+    }));
+  };
+
+  const handleUpdateNotes = (taskId: string, notes: string) => {
+    setTasks(tasks.map(task => 
+      task.id === taskId ? { ...task, notes } : task
+    ));
+  };
+
+  const handleAddAttachment = (taskId: string, file: File) => {
+    // In a real app, upload to server. Here, use object URL/base64 for demo.
+    // Simulating upload delay for effect if needed, but here synchronous.
+    const newAttachment: Attachment = {
+      id: `att-${Date.now()}`,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: URL.createObjectURL(file)
+    };
+
+    setTasks(prevTasks => prevTasks.map(task => 
+      task.id === taskId ? { ...task, attachments: [...(task.attachments || []), newAttachment] } : task
+    ));
+  };
+
+  const handleDeleteAttachment = (taskId: string, attachmentId: string) => {
+    setTasks(prevTasks => prevTasks.map(task => {
+       if (task.id !== taskId) return task;
+       return {
+         ...task,
+         attachments: (task.attachments || []).filter(a => a.id !== attachmentId)
+       };
     }));
   };
 
@@ -380,6 +460,32 @@ const App: React.FC = () => {
         return tasks.filter(t => !t.completed);
     }
   };
+
+  // --- Overall Progress Calculation ---
+  // Helper to get ALL tasks relevant to the current view (including completed ones) for accurate progress
+  const getProgressTasks = () => {
+    switch (view) {
+      case ViewType.COMPLETED:
+        return tasks.filter(t => t.completed);
+      case ViewType.TODAY:
+        return tasks.filter(t => t.dueDate && isSameDay(t.dueDate, new Date()));
+      case ViewType.CALENDAR_DATE:
+        return tasks.filter(t => t.dueDate && isSameDay(t.dueDate, selectedDate));
+      case ViewType.UPCOMING:
+        return tasks.filter(t => t.dueDate && t.dueDate > new Date());
+      case ViewType.PROJECT:
+        return tasks.filter(t => t.project === selectedProjectId);
+      case ViewType.INBOX:
+      default:
+        // For Inbox/Home, we consider all tasks for "Life Progress"
+        return tasks;
+    }
+  };
+
+  const progressTasks = getProgressTasks();
+  const totalProgressTasks = progressTasks.length;
+  const completedProgressTasks = progressTasks.filter(t => t.completed).length;
+  const overallProgress = totalProgressTasks === 0 ? 0 : (completedProgressTasks / totalProgressTasks) * 100;
 
   const taskCounts = {
     [ViewType.INBOX]: tasks.filter(t => !t.completed).length,
@@ -651,6 +757,36 @@ const App: React.FC = () => {
           ) : (
             /* Main Task View */
             <>
+              {/* Quote & Overall Progress */}
+              {view !== ViewType.COMPLETED && (
+                <div className="mb-6 animate-in fade-in duration-500">
+                   <div className="flex flex-col gap-3">
+                      <div className="flex items-start gap-2">
+                         <Quote size={14} className="text-purple-400 flex-shrink-0 mt-1 transform scale-x-[-1]" />
+                         <p className="text-sm text-gray-500 dark:text-gray-400 italic leading-relaxed font-medium">
+                            {currentQuote}
+                         </p>
+                      </div>
+                      
+                      {/* Overall Progress Bar */}
+                      {totalProgressTasks > 0 && (
+                        <div className="mt-2">
+                           <div className="flex justify-between text-xs font-medium text-gray-400 dark:text-gray-500 mb-1.5">
+                              <span>Overall Progress</span>
+                              <span>{Math.round(overallProgress)}%</span>
+                           </div>
+                           <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-black dark:bg-white transition-all duration-700 ease-out" 
+                                style={{ width: `${overallProgress}%` }} 
+                              />
+                           </div>
+                        </div>
+                      )}
+                   </div>
+                </div>
+              )}
+
               {/* Smart Input Area */}
               {view !== ViewType.COMPLETED && (
                 <div className={`
@@ -777,7 +913,12 @@ const App: React.FC = () => {
                       onOptimize={handleSmartOptimize}
                       onDelete={deleteTask}
                       onToggleSubtask={toggleSubtask}
+                      onAddSubtask={handleAddSubtask}
+                      onUpdateNotes={handleUpdateNotes}
+                      onAddAttachment={handleAddAttachment}
+                      onDeleteAttachment={handleDeleteAttachment}
                       onChat={handleTaskChat}
+                      lang={language}
                     />
                    ))
                 )}

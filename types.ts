@@ -19,6 +19,14 @@ export interface UserProfile {
   avatarUrl?: string;
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -30,6 +38,8 @@ export interface Task {
   priority: Priority;
   isAiGenerating?: boolean;
   motivation?: string; // AI Coach message
+  notes?: string;
+  attachments?: Attachment[];
 }
 
 export interface Subtask {

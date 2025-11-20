@@ -39,7 +39,13 @@ export const translations: Record<Language, Record<string, string>> = {
     editProfile: 'Edit Profile',
     save: 'Save',
     cancel: 'Cancel',
-    changePhoto: 'Change Photo'
+    changePhoto: 'Change Photo',
+    notes: 'Notes',
+    addNotes: 'Add notes...',
+    attachments: 'Attachments',
+    upload: 'Upload',
+    addStep: 'Add step...',
+    stepPlaceholder: 'What needs to be done?'
   },
   ar: {
     inbox: 'صندوق الوارد',
@@ -78,6 +84,12 @@ export const translations: Record<Language, Record<string, string>> = {
     editProfile: 'تعديل الملف',
     save: 'حفظ',
     cancel: 'إلغاء',
-    changePhoto: 'تغيير الصورة'
+    changePhoto: 'تغيير الصورة',
+    notes: 'ملاحظات',
+    addNotes: 'أضف ملاحظات...',
+    attachments: 'مرفقات',
+    upload: 'رفع',
+    addStep: 'أضف خطوة...',
+    stepPlaceholder: 'ما الذي يجب القيام به؟'
   }
 };
